@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cycle Timer Master</title>
+    <title>Cycle Timer Master - Gray Toggle</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --orange: #ff9800; --white: #ffffff; --gray-active: #546e7a; --bg: #f1f5f9; --success: #2e7d32; --danger: #ef4444; }
@@ -11,12 +11,10 @@
         .screen { width: 100%; max-width: 500px; min-height: 100vh; background: white; display: none; padding: 20px; box-sizing: border-box; }
         .active { display: block; }
 
-        /* Dashboard */
         .home-header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
         .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
         .menu-card { padding: 30px; border-radius: 20px; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 1.4rem; font-weight: 800; background: var(--orange); }
         
-        /* Timer UI */
         .back-btn { background: #eee; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 15px; }
         .section-card { border-top: 8px solid var(--orange); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         
@@ -27,7 +25,6 @@
         .timer-container { background: #1e293b; color: #38bdf8; padding: 20px; border-radius: 12px; text-align: center; margin: 15px 0; }
         .timer { font-size: 3.5rem; font-weight: 800; font-family: monospace; }
         
-        /* UNIFORM BUTTONS */
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .btn-step { 
             height: 75px; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 700; 
@@ -36,13 +33,13 @@
             padding: 5px; transition: background 0.2s;
         }
         
-        /* Active Highlight */
         .step-active { background: var(--gray-active) !important; }
-        .finish-step { background: var(--success) !important; }
-        
         .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
-        .muda-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 800; background: #e2e8f0; margin-bottom: 15px; cursor: pointer; }
+
+        .muda-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 800; background: #e2e8f0; margin-bottom: 8px; cursor: pointer; }
         .muda-on { background: var(--danger) !important; color: white; }
+        
+        .reset-btn { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-weight: 800; background: white; color: #64748b; cursor: pointer; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -67,7 +64,10 @@
                 <input type="text" id="qcNo" placeholder="QC No." style="padding:10px; border:1px solid #ddd; border-radius:8px;">
             </div>
             <div class="timer-container"><div class="timer" id="qc-timer">0.00</div></div>
+            
             <button id="qc-muda" class="muda-btn" onclick="toggleMuda('QC')" disabled>PAUSE (MUDA)</button>
+            <button class="reset-btn" onclick="resetCurrentTimer('QC')"><i class="fas fa-undo"></i> RESET CURRENT TIMER</button>
+            
             <div id="qc-btns" class="btn-grid"></div>
             <button class="muda-btn" onclick="downloadReport('QC')" style="margin-top:20px; background:#334155; color:white;">DOWNLOAD REPORT</button>
         </div>
@@ -85,7 +85,10 @@
                 <input type="text" id="rtgNo" placeholder="RTG No." style="padding:10px; border:1px solid #ddd; border-radius:8px;">
             </div>
             <div class="timer-container"><div class="timer" id="rtg-timer">0.00</div></div>
+            
             <button id="rtg-muda" class="muda-btn" onclick="toggleMuda('RTG')" disabled>PAUSE (MUDA)</button>
+            <button class="reset-btn" onclick="resetCurrentTimer('RTG')"><i class="fas fa-undo"></i> RESET CURRENT TIMER</button>
+            
             <div id="rtg-btns" class="btn-grid"></div>
             <button class="muda-btn" onclick="downloadReport('RTG')" style="margin-top:20px; background:#334155; color:white;">DOWNLOAD REPORT</button>
         </div>
@@ -155,26 +158,25 @@
             s.currentCycle['Step_'+(stepNum-1)] = ((now - s.lastTime) / 1000).toFixed(2);
         }
 
-        // Color Logic
+        // Toggle Color: Turn all orange, then only current one gray
         for(let i=1; i<=steps.length; i++) {
             const btn = document.getElementById(`${crane}-s${i}`);
             btn.disabled = true;
-            btn.classList.remove('step-active'); // Remove gray from everyone
+            btn.classList.remove('step-active');
         }
+
+        const currentBtn = document.getElementById(`${crane}-s${stepNum}`);
+        currentBtn.classList.add('step-active'); // Clicked button turns Gray
 
         if (stepNum === steps.length) {
             clearInterval(s.interval);
-            const finalBtn = document.getElementById(`${crane}-s${stepNum}`);
-            finalBtn.classList.add('finish-step'); // Show Green on last click
             s.currentCycle['Total'] = ((now - s.startTime) / 1000).toFixed(2);
             masterLogs.push({...s.currentCycle});
             document.getElementById(crane.toLowerCase() + '-muda').disabled = true;
             setTimeout(() => resetCrane(crane), 1200);
         } else {
-            // Highlight ONLY the next button in Gray
             const next = document.getElementById(`${crane}-s${stepNum+1}`);
             next.disabled = false;
-            next.classList.add('step-active');
         }
         s.lastTime = now;
     }
@@ -198,9 +200,20 @@
         }
     }
 
+    function resetCurrentTimer(crane) {
+        if(confirm("Reset current measurement? Saved reports will not be affected.")) {
+            resetCrane(crane);
+        }
+    }
+
     function resetCrane(crane) {
-        state[crane].startTime = null;
+        const s = state[crane];
+        clearInterval(s.interval);
+        s.startTime = null;
+        s.isPaused = false;
         document.getElementById(crane.toLowerCase()+'-timer').innerText = "0.00";
+        document.getElementById(crane.toLowerCase()+'-muda').disabled = true;
+        document.getElementById(crane.toLowerCase()+'-muda').classList.remove('muda-on');
         render(crane);
     }
 
