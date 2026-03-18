@@ -20,7 +20,6 @@
         .back-btn { background: #eee; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 15px; }
         .section-card { border-top: 8px solid var(--orange); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         
-        /* THE MISSING TOGGLE BUTTONS */
         .mode-toggle { display: flex; gap: 8px; margin-bottom: 15px; }
         .mode-btn { flex: 1; padding: 15px; border-radius: 10px; border: 2px solid #ddd; background: white; font-weight: 800; cursor: pointer; font-size: 0.9rem; }
         .mode-btn.active { background: #334155; color: white; border-color: #334155; }
@@ -28,20 +27,20 @@
         .timer-container { background: #1e293b; color: #38bdf8; padding: 20px; border-radius: 12px; text-align: center; margin: 15px 0; }
         .timer { font-size: 3.5rem; font-weight: 800; font-family: monospace; }
         
-        /* ALL BUTTONS SAME SIZE & COLOR */
+        /* UNIFORM BUTTONS */
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .btn-step { 
             height: 75px; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 700; 
             color: var(--white); background: var(--orange); cursor: pointer; 
             display: flex; align-items: center; justify-content: center; text-align: center;
-            padding: 5px;
+            padding: 5px; transition: background 0.2s;
         }
         
-        /* Active Step turns Gray */
+        /* Active Highlight */
         .step-active { background: var(--gray-active) !important; }
+        .finish-step { background: var(--success) !important; }
         
-        .btn-step:disabled { opacity: 0.3; cursor: not-allowed; }
-        
+        .btn-step:disabled { opacity: 0.4; cursor: not-allowed; }
         .muda-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 800; background: #e2e8f0; margin-bottom: 15px; cursor: pointer; }
         .muda-on { background: var(--danger) !important; color: white; }
     </style>
@@ -49,7 +48,7 @@
 <body>
 
     <div id="home-screen" class="screen active">
-        <div class="home-header"><h1>Cycle Timer</h1><p>Select Equipment</p></div>
+        <div class="home-header"><h1>Cycle Timer</h1><p>Terminal Operations Dashboard</p></div>
         <div class="menu-grid">
             <button class="menu-card" onclick="showScreen('qc-screen')"><span>QUAY CRANE</span><i class="fas fa-ship"></i></button>
             <button class="menu-card" style="background:#0891b2" onclick="showScreen('rtg-screen')"><span>RTG CRANE</span><i class="fas fa-truck-loading"></i></button>
@@ -63,17 +62,13 @@
                 <button id="qc-m-load" class="mode-btn active" onclick="setMode('QC', 'LOAD')">LOAD</button>
                 <button id="qc-m-dis" class="mode-btn" onclick="setMode('QC', 'DISCHARGE')">DISCHARGE</button>
             </div>
-            
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
                 <input type="text" id="qcStaffId" placeholder="Staff ID" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
                 <input type="text" id="qcNo" placeholder="QC No." style="padding:10px; border:1px solid #ddd; border-radius:8px;">
             </div>
-            
             <div class="timer-container"><div class="timer" id="qc-timer">0.00</div></div>
             <button id="qc-muda" class="muda-btn" onclick="toggleMuda('QC')" disabled>PAUSE (MUDA)</button>
-            
             <div id="qc-btns" class="btn-grid"></div>
-            
             <button class="muda-btn" onclick="downloadReport('QC')" style="margin-top:20px; background:#334155; color:white;">DOWNLOAD REPORT</button>
         </div>
     </div>
@@ -85,17 +80,13 @@
                 <button id="rtg-m-load" class="mode-btn active" onclick="setMode('RTG', 'LOAD')">LOAD</button>
                 <button id="rtg-m-dis" class="mode-btn" onclick="setMode('RTG', 'DISCHARGE')">DISCHARGE</button>
             </div>
-
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
                 <input type="text" id="rtgStaffId" placeholder="Staff ID" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
                 <input type="text" id="rtgNo" placeholder="RTG No." style="padding:10px; border:1px solid #ddd; border-radius:8px;">
             </div>
-            
             <div class="timer-container"><div class="timer" id="rtg-timer">0.00</div></div>
             <button id="rtg-muda" class="muda-btn" onclick="toggleMuda('RTG')" disabled>PAUSE (MUDA)</button>
-            
             <div id="rtg-btns" class="btn-grid"></div>
-            
             <button class="muda-btn" onclick="downloadReport('RTG')" style="margin-top:20px; background:#334155; color:white;">DOWNLOAD REPORT</button>
         </div>
     </div>
@@ -164,19 +155,23 @@
             s.currentCycle['Step_'+(stepNum-1)] = ((now - s.lastTime) / 1000).toFixed(2);
         }
 
+        // Color Logic
         for(let i=1; i<=steps.length; i++) {
             const btn = document.getElementById(`${crane}-s${i}`);
             btn.disabled = true;
-            btn.classList.remove('step-active');
+            btn.classList.remove('step-active'); // Remove gray from everyone
         }
 
         if (stepNum === steps.length) {
             clearInterval(s.interval);
+            const finalBtn = document.getElementById(`${crane}-s${stepNum}`);
+            finalBtn.classList.add('finish-step'); // Show Green on last click
             s.currentCycle['Total'] = ((now - s.startTime) / 1000).toFixed(2);
             masterLogs.push({...s.currentCycle});
             document.getElementById(crane.toLowerCase() + '-muda').disabled = true;
             setTimeout(() => resetCrane(crane), 1200);
         } else {
+            // Highlight ONLY the next button in Gray
             const next = document.getElementById(`${crane}-s${stepNum+1}`);
             next.disabled = false;
             next.classList.add('step-active');
@@ -211,7 +206,7 @@
 
     function downloadReport(type) {
         const filtered = masterLogs.filter(log => log.Equipment === type);
-        if (filtered.length === 0) return alert("No data.");
+        if (filtered.length === 0) return alert("No data recorded.");
         const csv = "data:text/csv;charset=utf-8," + Object.keys(filtered[0]).join(",") + "\n" + filtered.map(r => Object.values(r).join(",")).join("\n");
         const link = document.createElement("a");
         link.href = encodeURI(csv);
