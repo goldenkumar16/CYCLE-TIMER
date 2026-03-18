@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycle Timer Master - MUDA Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --qc: #2563eb; --rtg: #0891b2; --bg: #f1f5f9; --step: #475569; --success: #16a34a; --danger: #ef4444; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; justify-content: center; }
+        
+        .screen { width: 100%; max-width: 500px; min-height: 100vh; background: white; display: none; padding: 20px; box-sizing: border-box; }
+        .active { display: block; }
+
+        /* Master Home Page */
+        .home-header { text-align: center; margin-bottom: 40px; margin-top: 20px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .menu-card { 
+            padding: 30px; border-radius: 20px; border: none; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between; font-size: 1.5rem; font-weight: 800;
+        }
+        .qc-card { background: var(--qc); }
+        .rtg-card { background: var(--rtg); }
+
+        /* Timer Controls */
+        .back-btn { background: #eee; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 15px; }
+        .section-card { border-top: 6px solid #ccc; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        
+        .timer-container { background: #1e293b; color: #38bdf8; padding: 20px; border-radius: 12px; text-align: center; margin: 15px 0; position: relative; }
+        .timer { font-size: 3.5rem; font-weight: 800; font-family: monospace; }
+        
+        /* MUDA Button */
+        .muda-btn { 
+            width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 800; 
+            background: #cbd5e1; color: #475569; cursor: pointer; margin-bottom: 15px;
+            transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .muda-active { background: var(--danger) !important; color: white !important; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.7; } }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn-step { padding: 15px 5px; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: white; background: var(--step); cursor: pointer; min-height: 60px; }
+        .btn-step:disabled { background: #e2e8f0; color: #94a3b8; }
+        .finish { background: var(--success) !important; grid-column: span 2; }
+
+        .dl-btn { width: 100%; padding: 15px; background: #334155; color: white; border: none; border-radius: 12px; font-weight: 800; margin-top: 20px; cursor: pointer; }
+        
+        .mode-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: white; font-weight: bold; }
+        .mode-btn.active { background: #334155; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="home-screen" class="screen active">
+        <div class="home-header"><h1>Cycle Timer</h1><p>Terminal Operations Dashboard</p></div>
+        <div class="menu-grid">
+            <button class="menu-card qc-card" onclick="showScreen('qc-screen')"><span>QUAY CRANE</span><i class="fas fa-ship"></i></button>
+            <button class="menu-card rtg-card" onclick="showScreen('rtg-screen')"><span>RTG CRANE</span><i class="fas fa-truck-loading"></i></button>
+        </div>
+    </div>
+
+    <div id="qc-screen" class="screen">
+        <button class="back-btn" onclick="showScreen('home-screen')"><i class="fas fa-arrow-left"></i> HOME</button>
+        <div class="section-card" style="border-top-color: var(--qc);">
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button id="qc-m-load" class="mode-btn active" onclick="setMode('QC', 'LOAD')">LOAD</button>
+                <button id="qc-m-dis" class="mode-btn" onclick="setMode('QC', 'DISCHARGE')">DISCHARGE</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:10px;">
+                <input type="text" id="qcStaffId" placeholder="Staff ID" style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+                <input type="text" id="qcNo" placeholder="QC No." style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            
+            <div class="timer-container"><div class="timer" id="qc-timer">0.00</div><div id="qc-action" style="font-size:0.8rem; opacity:0.8;">READY</div></div>
+            
+            <button id="qc-muda" class="muda-btn" onclick="toggleMuda('QC')" disabled>
+                <i class="fas fa-pause"></i> PAUSE (MUDA)
+            </button>
+
+            <div id="qc-btns" class="btn-grid"></div>
+            <button class="dl-btn" onclick="downloadReport('QC')">DOWNLOAD QC REPORT</button>
+        </div>
+    </div>
+
+    <div id="rtg-screen" class="screen">
+        <button class="back-btn" onclick="showScreen('home-screen')"><i class="fas fa-arrow-left"></i> HOME</button>
+        <div class="section-card" style="border-top-color: var(--rtg);">
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button id="rtg-m-load" class="mode-btn active" onclick="setMode('RTG', 'LOAD')">LOAD</button>
+                <button id="rtg-m-dis" class="mode-btn" onclick="setMode('RTG', 'DISCHARGE')">DISCHARGE</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:10px;">
+                <input type="text" id="rtgStaffId" placeholder="Staff ID" style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+                <input type="text" id="rtgNo" placeholder="RTG No." style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+
+            <div class="timer-container"><div class="timer" id="rtg-timer">0.00</div><div id="rtg-action" style="font-size:0.8rem; opacity:0.8;">READY</div></div>
+
+            <button id="rtg-muda" class="muda-btn" onclick="toggleMuda('RTG')" disabled>
+                <i class="fas fa-pause"></i> PAUSE (MUDA)
+            </button>
+
+            <div id="rtg-btns" class="btn-grid"></div>
+            <button class="dl-btn" onclick="downloadReport('RTG')" style="background:var(--rtg)">DOWNLOAD RTG REPORT</button>
+        </div>
+    </div>
+
+<script>
+    let masterLogs = [];
+    let state = {
+        QC: { mode: 'LOAD', startTime: null, lastTime: null, interval: null, isPaused: false, mudaStart: null, totalMuda: 0, currentCycle: {} },
+        RTG: { mode: 'LOAD', startTime: null, lastTime: null, interval: null, isPaused: false, mudaStart: null, totalMuda: 0, currentCycle: {} }
+    };
+
+    const config = {
+        QC: {
+            LOAD: ["Park to Truck", "Truck to Lock", "Lock to Sill", "Sill to Vessel", "Vessel to Unlock", "Unlock to Park"],
+            DISCHARGE: ["Park to Vessel", "Vessel to Lock", "Lock to Sill", "Sill to Truck", "Truck to Unlock", "Unlock to Park"]
+        },
+        RTG: {
+            LOAD: ["Standby to Lock (Bay)", "Lock to Standby", "Standby to Unlock (Trk)", "Unlock to Standby"],
+            DISCHARGE: ["Park to Lock (Bay)", "Lock (Trk) to Unlock (Bay)", "Unlock (Bay) to Trk Line", "Trk Line to Park"]
+        }
+    };
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id !== 'home-screen') render(id.split('-')[0].toUpperCase());
+    }
+
+    function toggleMuda(crane) {
+        const s = state[crane];
+        const btn = document.getElementById(crane.toLowerCase() + '-muda');
+        if (!s.isPaused) {
+            s.isPaused = true;
+            s.mudaStart = Date.now();
+            btn.classList.add('muda-active');
+            btn.innerHTML = '<i class="fas fa-play"></i> RESUME FROM MUDA';
+            clearInterval(s.interval);
+        } else {
+            s.isPaused = false;
+            let waste = (Date.now() - s.mudaStart) / 1000;
+            s.totalMuda += waste;
+            // Shift the start time forward so the timer "stands still"
+            s.startTime += (Date.now() - s.mudaStart);
+            s.lastTime += (Date.now() - s.mudaStart);
+            btn.classList.remove('muda-active');
+            btn.innerHTML = '<i class="fas fa-pause"></i> PAUSE (MUDA)';
+            startClock(crane);
+        }
+    }
+
+    function startClock(crane) {
+        const s = state[crane];
+        s.interval = setInterval(() => {
+            document.getElementById(crane.toLowerCase()+'-timer').innerText = ((Date.now() - s.startTime)/1000).toFixed(2);
+        }, 50);
+    }
+
+    function triggerStep(crane, stepNum) {
+        const now = Date.now();
+        const s = state[crane];
+        const steps = config[crane][s.mode];
+        if (s.isPaused) return;
+
+        if (stepNum === 1) {
+            s.startTime = now;
+            s.totalMuda = 0;
+            s.currentCycle = { 
+                Date: new Date().toLocaleDateString(),
+                Equipment: crane,
+                Unit_No: document.getElementById(crane.toLowerCase() + 'No').value || "N/A",
+                Staff_ID: document.getElementById(crane.toLowerCase() + 'StaffId').value || "N/A",
+                Type: s.mode
+            };
+            document.getElementById(crane.toLowerCase() + '-muda').disabled = false;
+            startClock(crane);
+        } else {
+            s.currentCycle['Step_'+(stepNum-1)] = ((now - s.lastTime) / 1000).toFixed(2);
+        }
+
+        if (stepNum === steps.length) {
+            clearInterval(s.interval);
+            const total = ((now - s.startTime) / 1000).toFixed(2);
+            s.currentCycle['MUDA_Time'] = s.totalMuda.toFixed(2);
+            s.currentCycle['Net_Cycle_Time'] = (total - s.totalMuda).toFixed(2);
+            s.currentCycle['Gross_Total'] = total;
+            masterLogs.push({...s.currentCycle});
+            document.getElementById(crane.toLowerCase() + '-muda').disabled = true;
+            setTimeout(() => resetCrane(crane), 1200);
+        } else {
+            updateStepButtons(crane, stepNum, steps.length);
+        }
+        s.lastTime = now;
+    }
+
+    function updateStepButtons(crane, stepNum, total) {
+        for(let i=1; i<=total; i++) document.getElementById(`${crane}-s${i}`).disabled = true;
+        const next = document.getElementById(`${crane}-s${stepNum+1}`);
+        next.disabled = false;
+        next.style.background = crane === 'QC' ? 'var(--qc)' : 'var(--rtg)';
+    }
+
+    function resetCrane(crane) {
+        state[crane].startTime = null;
+        document.getElementById(crane.toLowerCase()+'-timer').innerText = "0.00";
+        render(crane);
+    }
+
+    function setMode(crane, mode) {
+        if(state[crane].startTime) return;
+        state[crane].mode = mode;
+        render(crane);
+    }
+
+    function render(crane) {
+        const container = document.getElementById(crane.toLowerCase() + '-btns');
+        container.innerHTML = '';
+        config[crane][state[crane].mode].forEach((text, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-step' + (i === config[crane][state[crane].mode].length - 1 ? ' finish' : '');
+            btn.disabled = i !== 0;
+            btn.id = `${crane}-s${i+1}`;
+            btn.innerText = (i+1) + ". " + text;
+            btn.onclick = () => triggerStep(crane, i + 1);
+            if(i === 0) btn.style.background = crane === 'QC' ? 'var(--qc)' : 'var(--rtg)';
+            container.appendChild(btn);
+        });
+    }
+
+    function downloadReport(type) {
+        const filtered = masterLogs.filter(log => log.Equipment === type);
+        if (filtered.length === 0) return alert(`No ${type} data.`);
+        const headers = Object.keys(filtered[0]).join(",");
+        let csv = "data:text/csv;charset=utf-8," + headers + "\n";
+        filtered.forEach(row => csv += Object.values(row).join(",") + "\n");
+        const link = document.createElement("a");
+        link.href = encodeURI(csv);
+        link.download = `${type}_Report_${new Date().toLocaleDateString()}.csv`;
+        link.click();
+    }
+</script>
+</body>
+</html>
